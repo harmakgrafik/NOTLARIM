@@ -4,26 +4,91 @@
 <meta charset="UTF-8">
 <title>Notlarım</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body{margin:0;background:#000;color:#fff;font-family:Arial}
-.wrap{max-width:600px;margin:20px auto}
-input,textarea,button,select{
-  width:100%;padding:10px;margin:5px 0;
-  border:none;border-radius:6px
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:Arial;
 }
+.wrap{max-width:900px;margin:20px auto;padding:10px}
+
+input,textarea,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:6px;
+  font-size:14px;
+}
+textarea{min-height:90px}
 button{background:#444;color:#fff;cursor:pointer}
-.note,.folder{
-  background:#666;padding:10px;margin:6px 0;border-radius:6px
-}
-.folder.active{background:#888}
+
+.row{display:flex;gap:6px}
+.row button{flex:1}
+
 .hidden{display:none}
 .small{font-size:12px;color:#aaa}
-.row{display:flex;gap:5px}
-.row button{width:100%}
+
+/* KLASÖRLER */
+#folders{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.folder{
+  background:#555;
+  padding:8px 14px;
+  border-radius:20px;
+  cursor:pointer;
+  user-select:none;
+}
+.folder.active{
+  border:2px solid #fff;
+  box-shadow:0 0 8px rgba(255,255,255,.6);
+  background:#777;
+}
+
+/* NOTLAR */
+#notes{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:12px;
+}
+.note{
+  background:#6b6b6b;
+  color:#000;
+  padding:12px;
+  border-radius:6px;
+  min-height:120px;
+  box-shadow:2px 3px 6px rgba(0,0,0,.5);
+  transform:rotate(-1deg);
+  cursor:pointer;
+  white-space:pre-wrap; /* ✅ paragraf */
+}
+.note:nth-child(even){
+  transform:rotate(1deg);
+}
+.note.selected{
+  outline:3px solid #fff;
+}
+
+/* BAŞLIK */
+h2{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+h2 button{
+  width:auto;
+  padding:4px 10px;
+}
 </style>
 </head>
-<body>
 
+<body>
 <div class="wrap">
 
 <!-- LOGIN -->
@@ -42,9 +107,9 @@ button{background:#444;color:#fff;cursor:pointer}
   </h2>
   <div class="small">Tasarımcı: Zeynel Can PAKIR</div>
 
-  <!-- ADD PANEL -->
+  <!-- PANEL -->
   <div id="panel" class="hidden">
-    <textarea id="noteText" placeholder="Not yaz..."></textarea>
+    <textarea id="noteText" placeholder="Not yaz (Enter = paragraf)"></textarea>
 
     <div class="row">
       <button onclick="addNote()">+ Not Ekle</button>
@@ -86,11 +151,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentFolder = null;
-let selectedNote = null;
+let currentFolder=null;
+let selectedNote=null;
 
-window.login = () => {
-  signInWithEmailAndPassword(auth,email.value,password.value)
+window.login=()=>{
+  signInWithEmailAndPassword(auth,email.value.trim(),password.value)
   .catch(e=>alert(e.code));
 };
 
@@ -109,14 +174,15 @@ function loadFolders(uid){
       const f=document.createElement("div");
       f.className="folder"+(currentFolder===d.id?" active":"");
       f.textContent=d.data().name;
-      f.oncontextmenu=e=>{
-        e.preventDefault();
-        const n=prompt("Yeni klasör adı",d.data().name);
-        if(n) updateDoc(doc(db,"folders",d.id),{name:n});
-      };
       f.onclick=()=>{
         currentFolder=d.id;
         loadNotes();
+        loadFolders(uid);
+      };
+      f.oncontextmenu=e=>{
+        e.preventDefault();
+        const n=prompt("Klasör adı",d.data().name);
+        if(n) updateDoc(doc(db,"folders",d.id),{name:n});
       };
       folders.appendChild(f);
     });
@@ -124,17 +190,17 @@ function loadFolders(uid){
 }
 
 function loadNotes(){
-  if(!currentFolder) return;
-  onSnapshot(query(
-    collection(db,"notes"),
-    where("folder","==",currentFolder)
-  ),snap=>{
+  onSnapshot(query(collection(db,"notes"),where("folder","==",currentFolder)),snap=>{
     notes.innerHTML="";
     snap.forEach(d=>{
       const n=document.createElement("div");
       n.className="note";
       n.textContent=d.data().text;
-      n.onclick=()=>selectedNote=d.id;
+      n.onclick=()=>{
+        document.querySelectorAll(".note").forEach(x=>x.classList.remove("selected"));
+        n.classList.add("selected");
+        selectedNote=d.id;
+      };
       n.oncontextmenu=e=>{
         e.preventDefault();
         const t=prompt("Notu düzenle",d.data().text);
@@ -145,24 +211,21 @@ function loadNotes(){
   });
 }
 
-window.addFolder = async()=>{
+window.addFolder=async()=>{
   const name=prompt("Klasör adı");
-  if(name) await addDoc(collection(db,"folders"),{
-    uid:auth.currentUser.uid,
-    name
-  });
+  if(name) await addDoc(collection(db,"folders"),{uid:auth.currentUser.uid,name});
 };
 
-window.deleteFolder = async()=>{
+window.deleteFolder=async()=>{
   if(!currentFolder) return alert("Klasör seç");
-  if(confirm("Klasör ve içindeki notlar silinsin mi?")){
+  if(confirm("Klasör silinsin mi?")){
     await deleteDoc(doc(db,"folders",currentFolder));
     currentFolder=null;
     notes.innerHTML="";
   }
 };
 
-window.addNote = async()=>{
+window.addNote=async()=>{
   if(!currentFolder) return alert("Önce klasör seç");
   if(!noteText.value) return;
   await addDoc(collection(db,"notes"),{
@@ -172,7 +235,7 @@ window.addNote = async()=>{
   noteText.value="";
 };
 
-window.deleteNote = async()=>{
+window.deleteNote=async()=>{
   if(!selectedNote) return alert("Not seç");
   await deleteDoc(doc(db,"notes",selectedNote));
   selectedNote=null;
@@ -182,6 +245,5 @@ window.togglePanel=()=>{
   panel.classList.toggle("hidden");
 };
 </script>
-
 </body>
 </html>
