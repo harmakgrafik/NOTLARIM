@@ -3,96 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <title>Notlarım</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body {
-    margin: 0;
-    background: #000;
-    color: #fff;
-    font-family: Arial, sans-serif;
-  }
-
-  .login, .app {
-    max-width: 400px;
-    margin: 100px auto;
-    text-align: center;
-  }
-
-  input {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: none;
-    border-radius: 6px;
-  }
-
-  button {
-    width: 100%;
-    padding: 12px;
-    background: #444;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  textarea {
-    width: 100%;
-    height: 100px;
-    margin-top: 10px;
-  }
-
-  .note {
-    background: #666;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 6px;
-  }
+body{margin:0;background:#000;color:#fff;font-family:Arial}
+.login,.app{max-width:400px;margin:100px auto;text-align:center}
+input,button{width:100%;padding:12px;margin:8px 0;border:none;border-radius:6px}
+button{background:#444;color:#fff;cursor:pointer}
 </style>
 </head>
 <body>
 
 <div class="login" id="loginBox">
   <h2>Giriş</h2>
-  <input id="email" placeholder="Kullanıcı adı (email)">
+  <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Şifre">
-  <button onclick="login()">Giriş</button>
+  <button id="loginBtn">Giriş</button>
 </div>
 
 <div class="app" id="appBox" style="display:none;">
   <h2>NOTLARIM</h2>
-  <textarea id="noteText" placeholder="Not yaz..."></textarea>
-  <button onclick="addNote()">+ Not Ekle</button>
-  <div id="notes"></div>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
-    authDomain: "notlarim-62876.firebaseapp.com",
-    projectId: "notlarim-62876",
-    storageBucket: "notlarim-62876.firebasestorage.app",
-    messagingSenderId: "742756530436",
-    appId: "1:742756530436:web:390887156b0d6d66b9f851"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
+  authDomain: "notlarim-62876.firebaseapp.com",
+  projectId: "notlarim-62876",
+  storageBucket: "notlarim-62876.firebasestorage.app",
+  messagingSenderId: "742756530436",
+  appId: "1:742756530436:web:390887156b0d6d66b9f851"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-  window.login = () => {
-    signInWithEmailAndPassword(
-      auth,
-      document.getElementById("email").value,
-      document.getElementById("password").value
-    ).catch(() => alert("Giriş hatalı"));
-  };
+document.getElementById("loginBtn").onclick = () => {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
 
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("appBox").style.display = "block";
-    }
-  });
+  signInWithEmailAndPassword(auth, email, pass)
+    .then(() => console.log("Giriş başarılı"))
+    .catch(err => alert(err.code));
+};
+
+onAuthStateChanged(auth, user => {
+  if(user){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("appBox").style.display="block";
+  }
+});
+</script>
+
+</body>
+</html>
