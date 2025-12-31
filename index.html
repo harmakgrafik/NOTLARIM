@@ -6,33 +6,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{margin:0;background:#000;color:#fff;font-family:Arial}
-.login,.app{max-width:500px;margin:40px auto;text-align:center}
-input,textarea,button{width:100%;padding:12px;margin:6px 0;border:none;border-radius:6px}
+.wrap{max-width:600px;margin:20px auto}
+input,textarea,button,select{
+  width:100%;padding:10px;margin:5px 0;
+  border:none;border-radius:6px
+}
 button{background:#444;color:#fff;cursor:pointer}
-.note{background:#666;padding:10px;margin:8px 0;border-radius:6px;text-align:left}
+.note,.folder{
+  background:#666;padding:10px;margin:6px 0;border-radius:6px
+}
+.folder.active{background:#888}
+.hidden{display:none}
+.small{font-size:12px;color:#aaa}
+.row{display:flex;gap:5px}
+.row button{width:100%}
 </style>
 </head>
 <body>
 
-<div class="login" id="loginBox">
+<div class="wrap">
+
+<!-- LOGIN -->
+<div id="loginBox">
   <h2>Giriş</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Şifre">
   <button onclick="login()">Giriş</button>
 </div>
 
-<div class="app" id="appBox" style="display:none;">
-  <h2>NOTLARIM</h2>
-  <textarea id="noteText" placeholder="Not yaz..."></textarea>
-  <button onclick="addNote()">+ Not Ekle</button>
+<!-- APP -->
+<div id="appBox" class="hidden">
+  <h2>
+    NOTLARIM
+    <button onclick="togglePanel()">+</button>
+  </h2>
+  <div class="small">Tasarımcı: Zeynel Can PAKIR</div>
+
+  <!-- ADD PANEL -->
+  <div id="panel" class="hidden">
+    <textarea id="noteText" placeholder="Not yaz..."></textarea>
+
+    <div class="row">
+      <button onclick="addNote()">+ Not Ekle</button>
+      <button onclick="deleteNote()">- Not Sil</button>
+    </div>
+
+    <div class="row">
+      <button onclick="addFolder()">+ Klasör</button>
+      <button onclick="deleteFolder()">- Klasör</button>
+    </div>
+  </div>
+
+  <h3>Klasörler</h3>
+  <div id="folders"></div>
+
+  <h3>Notlar</h3>
   <div id="notes"></div>
+</div>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot }
+import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -48,46 +86,100 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let currentFolder = null;
+let selectedNote = null;
+
 window.login = () => {
-  signInWithEmailAndPassword(
-    auth,
-    email.value,
-    password.value
-  ).catch(e => alert(e.code));
+  signInWithEmailAndPassword(auth,email.value,password.value)
+  .catch(e=>alert(e.code));
 };
 
-onAuthStateChanged(auth, user => {
-  if(user){
-    loginBox.style.display="none";
-    appBox.style.display="block";
-    loadNotes(user.uid);
+onAuthStateChanged(auth,u=>{
+  if(u){
+    loginBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+    loadFolders(u.uid);
   }
 });
 
-function loadNotes(uid){
-  const q = query(
-    collection(db,"notes"),
-    where("uid","==",uid)
-  );
-  onSnapshot(q, snap=>{
-    notes.innerHTML="";
+function loadFolders(uid){
+  onSnapshot(query(collection(db,"folders"),where("uid","==",uid)),snap=>{
+    folders.innerHTML="";
     snap.forEach(d=>{
-      const div=document.createElement("div");
-      div.className="note";
-      div.textContent=d.data().text;
-      notes.appendChild(div);
+      const f=document.createElement("div");
+      f.className="folder"+(currentFolder===d.id?" active":"");
+      f.textContent=d.data().name;
+      f.oncontextmenu=e=>{
+        e.preventDefault();
+        const n=prompt("Yeni klasör adı",d.data().name);
+        if(n) updateDoc(doc(db,"folders",d.id),{name:n});
+      };
+      f.onclick=()=>{
+        currentFolder=d.id;
+        loadNotes();
+      };
+      folders.appendChild(f);
     });
   });
 }
 
-window.addNote = async () => {
+function loadNotes(){
+  if(!currentFolder) return;
+  onSnapshot(query(
+    collection(db,"notes"),
+    where("folder","==",currentFolder)
+  ),snap=>{
+    notes.innerHTML="";
+    snap.forEach(d=>{
+      const n=document.createElement("div");
+      n.className="note";
+      n.textContent=d.data().text;
+      n.onclick=()=>selectedNote=d.id;
+      n.oncontextmenu=e=>{
+        e.preventDefault();
+        const t=prompt("Notu düzenle",d.data().text);
+        if(t) updateDoc(doc(db,"notes",d.id),{text:t});
+      };
+      notes.appendChild(n);
+    });
+  });
+}
+
+window.addFolder = async()=>{
+  const name=prompt("Klasör adı");
+  if(name) await addDoc(collection(db,"folders"),{
+    uid:auth.currentUser.uid,
+    name
+  });
+};
+
+window.deleteFolder = async()=>{
+  if(!currentFolder) return alert("Klasör seç");
+  if(confirm("Klasör ve içindeki notlar silinsin mi?")){
+    await deleteDoc(doc(db,"folders",currentFolder));
+    currentFolder=null;
+    notes.innerHTML="";
+  }
+};
+
+window.addNote = async()=>{
+  if(!currentFolder) return alert("Önce klasör seç");
   if(!noteText.value) return;
   await addDoc(collection(db,"notes"),{
-    uid: auth.currentUser.uid,
-    text: noteText.value,
-    created: Date.now()
+    folder:currentFolder,
+    text:noteText.value
   });
   noteText.value="";
+};
+
+window.deleteNote = async()=>{
+  if(!selectedNote) return alert("Not seç");
+  await deleteDoc(doc(db,"notes",selectedNote));
+  selectedNote=null;
+};
+
+window.togglePanel=()=>{
+  panel.classList.toggle("hidden");
 };
 </script>
 
