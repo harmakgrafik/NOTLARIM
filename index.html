@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Notlarım</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f0f0f;
+    color: #eee;
+    padding: 20px;
+}
+
+#app, #login {
+    max-width: 1200px;
+    margin: auto;
+}
+
+#login {
+    max-width: 400px;
+    margin-top: 100px;
+}
+
+input, button, textarea {
+    padding: 10px;
+    margin: 6px 0;
+    background: #1e1e1e;
+    color: #eee;
+    border: 1px solid #333;
+    width: 100%;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel {
+    display: none;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+}
+
+.folders, .notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.folder {
+    background: #1f1f1f;
+    border: 1px dashed #555;
+    padding: 15px;
+    width: 180px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.folder.active { outline: 2px solid #4da3ff; }
+
+.note {
+    background: #2b2b2b;
+    padding: 15px;
+    width: 220px;
+    min-height: 120px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: pre-wrap;
+}
+
+.note.selected { outline: 2px solid #4da3ff; }
+
+.toggle-btn {
+    width: auto;
+    font-size: 22px;
+    padding: 4px 14px;
+}
+</style>
+</head>
+<body>
+
+<!-- GİRİŞ -->
+<div id="login">
+    <h2>Giriş</h2>
+    <input id="username" placeholder="Kullanıcı adı">
+    <input id="password" type="password" placeholder="Şifre">
+    <button onclick="login()">Giriş Yap</button>
+</div>
+
+<!-- UYGULAMA -->
+<div id="app" style="display:none;">
+
+<header>
+    <h1>NOTLARIM</h1>
+    <button class="toggle-btn" onclick="togglePanel()">+</button>
+</header>
+
+<div class="panel" id="panel">
+    <textarea id="noteText" rows="4" placeholder="Notunu yaz..."></textarea>
+
+    <div class="row">
+        <button onclick="addNote()">➕ Not Ekle</button>
+        <button onclick="deleteSelectedNote()">➖ Not Sil</button>
+    </div>
+
+    <div class="row">
+        <button onclick="createFolder()">➕ Klasör Oluştur</button>
+        <button onclick="deleteFolder()">➖ Klasör Sil</button>
+    </div>
+</div>
+
+<div class="folders" id="folders"></div>
+<div class="notes" id="notes"></div>
+
+<br>
+<small>Tasarımcı: Zeynel Can PAKIR</small>
+</div>
+
+<script>
+/* -------- GİRİŞ -------- */
+const USER = "can";
+const PASS = "Casper135.";
+
+if (localStorage.getItem("loggedIn") === "true") showApp();
+
+function login() {
+    if (
+        username.value === USER &&
+        password.value === PASS
+    ) {
+        localStorage.setItem("loggedIn", "true");
+        showApp();
+    } else {
+        alert("Hatalı giriş bilgileri");
+    }
+}
+
+function showApp() {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+}
+
+/* -------- APP -------- */
+const STORE = "sticky_notes_secure";
+let activeFolder = null;
+let selectedNoteIndex = null;
+let panelOpen = false;
+
+function togglePanel() {
+    panelOpen = !panelOpen;
+    panel.style.display = panelOpen ? "block" : "none";
+}
+
+function getData() {
+    return JSON.parse(localStorage.getItem(STORE)) || { folders: [], notes: [] };
+}
+
+function saveData(d) {
+    localStorage.setItem(STORE, JSON.stringify(d));
+}
+
+/* KLASÖR */
+function createFolder() {
+    const n = prompt("Klasör adı:");
+    if (!n) return;
+    const d = getData();
+    d.folders.push(n);
+    activeFolder = n;
+    saveData(d);
+    render();
+}
+
+function deleteFolder() {
+    if (!activeFolder) return;
+    const d = getData();
+    d.folders = d.folders.filter(f => f !== activeFolder);
+    d.notes = d.notes.filter(n => n.folder !== activeFolder);
+    activeFolder = null;
+    saveData(d);
+    render();
+}
+
+/* NOT */
+function addNote() {
+    if (!activeFolder) return alert("Önce klasör seç");
+    const t = noteText.value.trim();
+    if (!t) return;
+    const d = getData();
+    d.notes.unshift({ text: t, folder: activeFolder });
+    saveData(d);
+    noteText.value = "";
+    render();
+}
+
+function deleteSelectedNote() {
+    if (selectedNoteIndex === null) return;
+    const d = getData();
+    d.notes.splice(selectedNoteIndex, 1);
+    selectedNoteIndex = null;
+    saveData(d);
+    render();
+}
+
+function render() {
+    folders.innerHTML = "";
+    notes.innerHTML = "";
+    const d = getData();
+
+    d.folders.forEach(f => {
+        const el = document.createElement("div");
+        el.className = "folder" + (f === activeFolder ? " active" : "");
+        el.textContent = "📁 " + f;
+        el.onclick = () => { activeFolder = f; render(); };
+        folders.appendChild(el);
+    });
+
+    d.notes.forEach((n,i) => {
+        if (n.folder !== activeFolder) return;
+        const el = document.createElement("div");
+        el.className = "note" + (i === selectedNoteIndex ? " selected" : "");
+        el.textContent = n.text;
+        el.onclick = () => { selectedNoteIndex = i; render(); };
+        notes.appendChild(el);
+    });
+}
+
+render();
+</script>
+
+</body>
+</html>
