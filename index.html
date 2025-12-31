@@ -10,11 +10,14 @@ body{
   margin:0;
   background:#000;
   color:#fff;
-  font-family:Arial;
+  font-family:Arial,Helvetica,sans-serif;
 }
-.wrap{max-width:900px;margin:20px auto;padding:10px}
-
-input,textarea,button{
+.wrap{
+  max-width:900px;
+  margin:auto;
+  padding:15px;
+}
+input, textarea, button{
   width:100%;
   padding:10px;
   margin:6px 0;
@@ -23,32 +26,43 @@ input,textarea,button{
   font-size:14px;
 }
 textarea{min-height:90px}
-button{background:#444;color:#fff;cursor:pointer}
-
-.row{display:flex;gap:6px}
+button{
+  background:#444;
+  color:#fff;
+  cursor:pointer;
+}
+.row{
+  display:flex;
+  gap:6px;
+}
 .row button{flex:1}
-
 .hidden{display:none}
 .small{font-size:12px;color:#aaa}
+
+/* BAŞLIK */
+h2{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
 
 /* KLASÖRLER */
 #folders{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
-  margin-bottom:10px;
+  margin:10px 0;
 }
 .folder{
   background:#555;
   padding:8px 14px;
   border-radius:20px;
   cursor:pointer;
-  user-select:none;
 }
 .folder.active{
   border:2px solid #fff;
-  box-shadow:0 0 8px rgba(255,255,255,.6);
   background:#777;
+  box-shadow:0 0 8px rgba(255,255,255,.6);
 }
 
 /* NOTLAR */
@@ -64,26 +78,11 @@ button{background:#444;color:#fff;cursor:pointer}
   border-radius:6px;
   min-height:120px;
   box-shadow:2px 3px 6px rgba(0,0,0,.5);
-  transform:rotate(-1deg);
   cursor:pointer;
-  white-space:pre-wrap; /* ✅ paragraf */
-}
-.note:nth-child(even){
-  transform:rotate(1deg);
+  white-space:pre-wrap; /* paragraf */
 }
 .note.selected{
   outline:3px solid #fff;
-}
-
-/* BAŞLIK */
-h2{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-h2 button{
-  width:auto;
-  padding:4px 10px;
 }
 </style>
 </head>
@@ -91,7 +90,7 @@ h2 button{
 <body>
 <div class="wrap">
 
-<!-- LOGIN -->
+<!-- GİRİŞ -->
 <div id="loginBox">
   <h2>Giriş</h2>
   <input id="email" placeholder="Email">
@@ -99,7 +98,7 @@ h2 button{
   <button onclick="login()">Giriş</button>
 </div>
 
-<!-- APP -->
+<!-- UYGULAMA -->
 <div id="appBox" class="hidden">
   <h2>
     NOTLARIM
@@ -107,7 +106,7 @@ h2 button{
   </h2>
   <div class="small">Tasarımcı: Zeynel Can PAKIR</div>
 
-  <!-- PANEL -->
+  <!-- EKLEME PANELİ -->
   <div id="panel" class="hidden">
     <textarea id="noteText" placeholder="Not yaz (Enter = paragraf)"></textarea>
 
@@ -138,6 +137,7 @@ from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* 🔥 Firebase Ayarların */
 const firebaseConfig = {
   apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
   authDomain: "notlarim-62876.firebaseapp.com",
@@ -154,66 +154,111 @@ const db = getFirestore(app);
 let currentFolder=null;
 let selectedNote=null;
 
+/* GİRİŞ */
 window.login=()=>{
-  signInWithEmailAndPassword(auth,email.value.trim(),password.value)
-  .catch(e=>alert(e.code));
+  signInWithEmailAndPassword(
+    auth,
+    email.value.trim(),
+    password.value
+  ).catch(e=>alert(e.code));
 };
 
-onAuthStateChanged(auth,u=>{
-  if(u){
+/* OTURUM */
+onAuthStateChanged(auth,user=>{
+  if(user){
     loginBox.classList.add("hidden");
     appBox.classList.remove("hidden");
-    loadFolders(u.uid);
+    loadFolders(user.uid);
   }
 });
 
+/* KLASÖRLER */
 function loadFolders(uid){
-  onSnapshot(query(collection(db,"folders"),where("uid","==",uid)),snap=>{
-    folders.innerHTML="";
-    snap.forEach(d=>{
-      const f=document.createElement("div");
-      f.className="folder"+(currentFolder===d.id?" active":"");
-      f.textContent=d.data().name;
-      f.onclick=()=>{
-        currentFolder=d.id;
-        loadNotes();
-        loadFolders(uid);
-      };
-      f.oncontextmenu=e=>{
-        e.preventDefault();
-        const n=prompt("Klasör adı",d.data().name);
-        if(n) updateDoc(doc(db,"folders",d.id),{name:n});
-      };
-      folders.appendChild(f);
-    });
-  });
+  onSnapshot(
+    query(collection(db,"folders"),where("uid","==",uid)),
+    snap=>{
+      folders.innerHTML="";
+      snap.forEach(d=>{
+        const f=document.createElement("div");
+        f.className="folder"+(currentFolder===d.id?" active":"");
+        f.textContent=d.data().name;
+
+        f.onclick=()=>{
+          currentFolder=d.id;
+          loadNotes();
+          loadFolders(uid);
+        };
+
+        /* PC sağ tık */
+        f.oncontextmenu=e=>{
+          e.preventDefault();
+          const n=prompt("Klasör adı",d.data().name);
+          if(n) updateDoc(doc(db,"folders",d.id),{name:n});
+        };
+
+        /* Mobil basılı tut */
+        let timer;
+        f.ontouchstart=()=>{
+          timer=setTimeout(()=>{
+            const n=prompt("Klasör adı",d.data().name);
+            if(n) updateDoc(doc(db,"folders",d.id),{name:n});
+          },600);
+        };
+        f.ontouchend=()=>clearTimeout(timer);
+
+        folders.appendChild(f);
+      });
+    }
+  );
 }
 
+/* NOTLAR */
 function loadNotes(){
-  onSnapshot(query(collection(db,"notes"),where("folder","==",currentFolder)),snap=>{
-    notes.innerHTML="";
-    snap.forEach(d=>{
-      const n=document.createElement("div");
-      n.className="note";
-      n.textContent=d.data().text;
-      n.onclick=()=>{
-        document.querySelectorAll(".note").forEach(x=>x.classList.remove("selected"));
-        n.classList.add("selected");
-        selectedNote=d.id;
-      };
-      n.oncontextmenu=e=>{
-        e.preventDefault();
-        const t=prompt("Notu düzenle",d.data().text);
-        if(t) updateDoc(doc(db,"notes",d.id),{text:t});
-      };
-      notes.appendChild(n);
-    });
-  });
+  onSnapshot(
+    query(collection(db,"notes"),where("folder","==",currentFolder)),
+    snap=>{
+      notes.innerHTML="";
+      snap.forEach(d=>{
+        const n=document.createElement("div");
+        n.className="note";
+        n.textContent=d.data().text;
+
+        n.onclick=()=>{
+          document.querySelectorAll(".note").forEach(x=>x.classList.remove("selected"));
+          n.classList.add("selected");
+          selectedNote=d.id;
+        };
+
+        /* PC sağ tık */
+        n.oncontextmenu=e=>{
+          e.preventDefault();
+          const t=prompt("Notu düzenle",d.data().text);
+          if(t) updateDoc(doc(db,"notes",d.id),{text:t});
+        };
+
+        /* Mobil basılı tut */
+        let timer;
+        n.ontouchstart=()=>{
+          timer=setTimeout(()=>{
+            const t=prompt("Notu düzenle",d.data().text);
+            if(t) updateDoc(doc(db,"notes",d.id),{text:t});
+          },600);
+        };
+        n.ontouchend=()=>clearTimeout(timer);
+
+        notes.appendChild(n);
+      });
+    }
+  );
 }
 
+/* EKLE / SİL */
 window.addFolder=async()=>{
   const name=prompt("Klasör adı");
-  if(name) await addDoc(collection(db,"folders"),{uid:auth.currentUser.uid,name});
+  if(name) await addDoc(collection(db,"folders"),{
+    uid:auth.currentUser.uid,
+    name
+  });
 };
 
 window.deleteFolder=async()=>{
