@@ -6,9 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{margin:0;background:#000;color:#fff;font-family:Arial}
-.login,.app{max-width:400px;margin:100px auto;text-align:center}
-input,button{width:100%;padding:12px;margin:8px 0;border:none;border-radius:6px}
+.login,.app{max-width:500px;margin:40px auto;text-align:center}
+input,textarea,button{width:100%;padding:12px;margin:6px 0;border:none;border-radius:6px}
 button{background:#444;color:#fff;cursor:pointer}
+.note{background:#666;padding:10px;margin:8px 0;border-radius:6px;text-align:left}
 </style>
 </head>
 <body>
@@ -17,17 +18,22 @@ button{background:#444;color:#fff;cursor:pointer}
   <h2>Giriş</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Şifre">
-  <button id="loginBtn">Giriş</button>
+  <button onclick="login()">Giriş</button>
 </div>
 
 <div class="app" id="appBox" style="display:none;">
   <h2>NOTLARIM</h2>
+  <textarea id="noteText" placeholder="Not yaz..."></textarea>
+  <button onclick="addNote()">+ Not Ekle</button>
+  <div id="notes"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
@@ -40,22 +46,49 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-document.getElementById("loginBtn").onclick = () => {
-  const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-
-  signInWithEmailAndPassword(auth, email, pass)
-    .then(() => console.log("Giriş başarılı"))
-    .catch(err => alert(err.code));
+window.login = () => {
+  signInWithEmailAndPassword(
+    auth,
+    email.value,
+    password.value
+  ).catch(e => alert(e.code));
 };
 
 onAuthStateChanged(auth, user => {
   if(user){
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("appBox").style.display="block";
+    loginBox.style.display="none";
+    appBox.style.display="block";
+    loadNotes(user.uid);
   }
 });
+
+function loadNotes(uid){
+  const q = query(
+    collection(db,"notes"),
+    where("uid","==",uid)
+  );
+  onSnapshot(q, snap=>{
+    notes.innerHTML="";
+    snap.forEach(d=>{
+      const div=document.createElement("div");
+      div.className="note";
+      div.textContent=d.data().text;
+      notes.appendChild(div);
+    });
+  });
+}
+
+window.addNote = async () => {
+  if(!noteText.value) return;
+  await addDoc(collection(db,"notes"),{
+    uid: auth.currentUser.uid,
+    text: noteText.value,
+    created: Date.now()
+  });
+  noteText.value="";
+};
 </script>
 
 </body>
