@@ -9,45 +9,23 @@
 *{box-sizing:border-box;font-family:Arial}
 body{margin:0;background:#0b0e14;color:#e5e7eb}
 
-/* HEADER */
-header{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:12px 16px;background:#111827;
-}
-#logo{font-size:22px;font-weight:bold}
-#addBtn{font-size:26px;cursor:pointer}
+/* PANELS */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#0b0e14}
+.hidden{display:none}
 
-/* SEARCH */
-#search{
-  width:100%;padding:10px;margin:10px;border-radius:6px;border:none;
-  background:#1f2933;color:#fff;
-}
-
-/* FORM */
-#form{display:none;padding:10px}
-#form input{
+/* LOGIN */
+#loginBox{width:90%;max-width:320px}
+#loginBox h2{text-align:center;margin-bottom:10px}
+#loginBox input{
   width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;
-  background:#1f2933;color:#fff;
+  background:#1f2933;color:#fff
 }
-#saveBtn{
-  width:100%;padding:10px;border:none;border-radius:6px;
-  background:#2563eb;color:#fff;cursor:pointer;
+#loginBtn{
+  width:100%;padding:10px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer
 }
+#loginErr{color:#f87171;height:18px;text-align:center}
 
-/* LIST */
-#list{padding:10px}
-.card{
-  background:#111827;margin-bottom:8px;padding:10px;border-radius:8px;
-  display:flex;justify-content:space-between;align-items:flex-start;
-}
-.card span{cursor:pointer;white-space:pre-line}
-.del{color:#f87171;font-weight:bold;cursor:pointer}
-
-/* LOCK */
-#lock{
-  position:fixed;inset:0;background:#0b0e14;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-}
+/* PIN */
 #dots{display:flex;gap:10px;margin-bottom:20px}
 .dot{width:12px;height:12px;border:2px solid #555;border-radius:50%}
 .dot.fill{background:#fff;border-color:#fff}
@@ -55,46 +33,94 @@ header{
 .key{
   width:70px;height:70px;border-radius:50%;
   background:#1f2933;display:flex;align-items:center;justify-content:center;
-  font-size:20px;cursor:pointer;user-select:none;
+  font-size:20px;cursor:pointer;user-select:none
 }
 .key.zero{grid-column:2}
-#error{color:#f87171;margin-top:10px;height:20px}
+#pinErr{color:#f87171;margin-top:10px;height:20px}
+
+/* APP */
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;background:#111827
+}
+#logo{font-size:22px;font-weight:bold}
+#addBtn{font-size:26px;cursor:pointer}
+
+#search{
+  width:100%;padding:10px;margin:10px;border-radius:6px;border:none;
+  background:#1f2933;color:#fff
+}
+
+#form{display:none;padding:10px}
+#form input{
+  width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;
+  background:#1f2933;color:#fff
+}
+#saveBtn{
+  width:100%;padding:10px;border:none;border-radius:6px;
+  background:#2563eb;color:#fff;cursor:pointer
+}
+
+#list{padding:10px}
+.card{
+  background:#111827;margin-bottom:8px;padding:10px;border-radius:8px;
+  display:flex;justify-content:space-between;align-items:flex-start
+}
+.card span{cursor:pointer;white-space:pre-line}
+.del{color:#f87171;font-weight:bold;cursor:pointer}
 </style>
 </head>
 <body>
 
-<!-- LOCK SCREEN -->
-<div id="lock">
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen" class="screen">
+  <div id="loginBox">
+    <h2>Giriş</h2>
+    <input id="email" placeholder="E-posta">
+    <input id="password" type="password" placeholder="Şifre">
+    <button id="loginBtn">Giriş Yap</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ================= PIN ================= -->
+<div id="pinScreen" class="screen hidden">
   <div id="dots">
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
   </div>
   <div id="pad"></div>
-  <div id="error"></div>
+  <div id="pinErr"></div>
 </div>
 
-<header>
-  <div id="logo">ZCP</div>
-  <div id="addBtn">+</div>
-</header>
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <header>
+    <div id="logo">ZCP</div>
+    <div id="addBtn">+</div>
+  </header>
 
-<input id="search" placeholder="ARA..." />
+  <input id="search" placeholder="ARA..." />
 
-<div id="form">
-  <input id="label" placeholder="ETİKET">
-  <input id="user" placeholder="KULLANICI ADI">
-  <input id="pass" placeholder="PAROLA">
-  <button id="saveBtn" type="button">Kaydet</button>
+  <div id="form">
+    <input id="label" placeholder="ETİKET">
+    <input id="user" placeholder="KULLANICI ADI">
+    <input id="pass" placeholder="PAROLA">
+    <button id="saveBtn" type="button">Kaydet</button>
+  </div>
+
+  <div id="list"></div>
 </div>
-
-<div id="list"></div>
 
 <!-- ================= FIREBASE ================= -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
-from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+/* --- Firebase config --- */
 const firebaseConfig = {
   apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
   authDomain: "notlarim-62876.firebaseapp.com",
@@ -105,35 +131,67 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 const colRef = collection(db,"zcp");
 
-/* ---------- PIN ---------- */
+/* ================= LOGIN ================= */
+const loginScreen = document.getElementById("loginScreen");
+const pinScreen   = document.getElementById("pinScreen");
+const appScreen   = document.getElementById("app");
+
+const emailInp = document.getElementById("email");
+const passInp  = document.getElementById("password");
+const loginBtn = document.getElementById("loginBtn");
+const loginErr = document.getElementById("loginErr");
+
+loginBtn.onclick = async ()=>{
+  loginErr.textContent="";
+  try{
+    await signInWithEmailAndPassword(auth, emailInp.value, passInp.value);
+  }catch(e){
+    loginErr.textContent="Giriş başarısız";
+  }
+};
+
+onAuthStateChanged(auth, user=>{
+  if(user){
+    loginScreen.classList.add("hidden");
+    pinScreen.classList.remove("hidden");
+  }else{
+    loginScreen.classList.remove("hidden");
+    pinScreen.classList.add("hidden");
+    appScreen.classList.add("hidden");
+  }
+});
+
+/* ================= PIN ================= */
 const TRUE_PIN="956251";
 let entered="";
 const dots=document.querySelectorAll(".dot");
-const lock=document.getElementById("lock");
 const pad=document.getElementById("pad");
-const error=document.getElementById("error");
+const pinErr=document.getElementById("pinErr");
 
+/* Tuş dizilimi: 789 / 456 / 123 / 0 */
 ["7","8","9","4","5","6","1","2","3","0"].forEach(n=>{
   const b=document.createElement("div");
   b.className="key"+(n==="0"?" zero":"");
   b.textContent=n;
-  b.addEventListener("pointerdown",()=>press(n));
+  b.addEventListener("pointerdown",()=>press(n)); // tek olay = çift basma yok
   pad.appendChild(b);
 });
 
 function press(n){
-  if(entered.length>=6)return;
+  if(entered.length>=6) return;
   entered+=n;
   dots[entered.length-1].classList.add("fill");
   if(entered.length===6){
     if(entered===TRUE_PIN){
-      lock.style.display="none";
+      pinScreen.classList.add("hidden");
+      appScreen.classList.remove("hidden");
       loadData();
     }else{
-      error.textContent="Şifre yanlış";
+      pinErr.textContent="Şifre yanlış";
       setTimeout(resetPin,800);
     }
   }
@@ -141,10 +199,10 @@ function press(n){
 function resetPin(){
   entered="";
   dots.forEach(d=>d.classList.remove("fill"));
-  error.textContent="";
+  pinErr.textContent="";
 }
 
-/* ---------- APP ---------- */
+/* ================= APP ================= */
 const addBtn=document.getElementById("addBtn");
 const form=document.getElementById("form");
 const saveBtn=document.getElementById("saveBtn");
@@ -172,7 +230,7 @@ saveBtn.onclick=async()=>{
   const label=document.getElementById("label").value.trim().toUpperCase();
   const user=document.getElementById("user").value.trim();
   const pass=document.getElementById("pass").value.trim();
-  if(!label||!user||!pass)return;
+  if(!label||!user||!pass) return;
 
   await addDoc(colRef,{label,user,pass});
   form.style.display="none";
@@ -190,10 +248,10 @@ function render(){
     c.className="card";
 
     const left=document.createElement("span");
-    left.textContent=
-      d.label+"\n"+
-      "KULLANICI: "+d.user+"\n"+
-      "ŞİFRE: "+d.pass;
+    left.textContent =
+      d.label + "\n" +
+      "KULLANICI: " + d.user + "\n" +
+      "ŞİFRE: " + d.pass;
 
     const del=document.createElement("div");
     del.className="del";
