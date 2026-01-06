@@ -4,44 +4,57 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZCP</title>
+
 <style>
 *{box-sizing:border-box;font-family:Arial}
-body{margin:0;background:#0f1115;color:#fff}
+body{margin:0;background:#0b0e14;color:#e5e7eb}
+
+/* HEADER */
 header{
   display:flex;justify-content:space-between;align-items:center;
-  padding:12px 16px;background:#151821;
+  padding:12px 16px;background:#111827;
 }
 #logo{font-size:22px;font-weight:bold}
 #addBtn{font-size:26px;cursor:pointer}
 
-#search{width:100%;padding:10px;margin:10px;border-radius:6px;border:none}
+/* SEARCH */
+#search{
+  width:100%;padding:10px;margin:10px;border-radius:6px;border:none;
+  background:#1f2933;color:#fff;
+}
 
+/* FORM */
 #form{display:none;padding:10px}
-#form input{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none}
+#form input{
+  width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;
+  background:#1f2933;color:#fff;
+}
+#saveBtn{
+  width:100%;padding:10px;border:none;border-radius:6px;
+  background:#2563eb;color:#fff;cursor:pointer;
+}
 
-#saveBtn{width:100%;padding:10px;border:none;border-radius:6px;background:#3b82f6;color:#fff}
-
+/* LIST */
 #list{padding:10px}
 .card{
-  background:#1b1f2a;margin-bottom:8px;padding:10px;border-radius:8px;
-  display:flex;justify-content:space-between;align-items:center;
+  background:#111827;margin-bottom:8px;padding:10px;border-radius:8px;
+  display:flex;justify-content:space-between;align-items:flex-start;
 }
-.card span{cursor:pointer}
+.card span{cursor:pointer;white-space:pre-line}
 .del{color:#f87171;font-weight:bold;cursor:pointer}
 
-/* PIN */
+/* LOCK */
 #lock{
-  position:fixed;inset:0;background:#0f1115;
+  position:fixed;inset:0;background:#0b0e14;
   display:flex;flex-direction:column;justify-content:center;align-items:center;
 }
 #dots{display:flex;gap:10px;margin-bottom:20px}
 .dot{width:12px;height:12px;border:2px solid #555;border-radius:50%}
 .dot.fill{background:#fff;border-color:#fff}
-
 #pad{display:grid;grid-template-columns:repeat(3,70px);gap:12px}
 .key{
   width:70px;height:70px;border-radius:50%;
-  background:#1b1f2a;display:flex;align-items:center;justify-content:center;
+  background:#1f2933;display:flex;align-items:center;justify-content:center;
   font-size:20px;cursor:pointer;user-select:none;
 }
 .key.zero{grid-column:2}
@@ -50,7 +63,7 @@ header{
 </head>
 <body>
 
-<!-- KİLİT EKRANI -->
+<!-- LOCK SCREEN -->
 <div id="lock">
   <div id="dots">
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
@@ -71,37 +84,54 @@ header{
   <input id="label" placeholder="ETİKET">
   <input id="user" placeholder="KULLANICI ADI">
   <input id="pass" placeholder="PAROLA">
-  <button id="saveBtn">Kaydet</button>
+  <button id="saveBtn" type="button">Kaydet</button>
 </div>
 
 <div id="list"></div>
 
-<script>
-// ---------- PIN ----------
-const सहीPIN = "956251";
-let entered = "";
-const dots = document.querySelectorAll(".dot");
-const lock = document.getElementById("lock");
-const pad = document.getElementById("pad");
-const error = document.getElementById("error");
+<!-- ================= FIREBASE ================= -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Tuş dizilimi: 789 / 456 / 123 / 0
+const firebaseConfig = {
+  apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
+  authDomain: "notlarim-62876.firebaseapp.com",
+  projectId: "notlarim-62876",
+  storageBucket: "notlarim-62876.firebasestorage.app",
+  messagingSenderId: "742756530436",
+  appId: "1:742756530436:web:390887156b0d6d66b9f851"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const colRef = collection(db,"zcp");
+
+/* ---------- PIN ---------- */
+const TRUE_PIN="956251";
+let entered="";
+const dots=document.querySelectorAll(".dot");
+const lock=document.getElementById("lock");
+const pad=document.getElementById("pad");
+const error=document.getElementById("error");
+
 ["7","8","9","4","5","6","1","2","3","0"].forEach(n=>{
   const b=document.createElement("div");
   b.className="key"+(n==="0"?" zero":"");
   b.textContent=n;
-  b.addEventListener("pointerdown",()=>press(n)); // TEK OLAY = çift yazma yok
+  b.addEventListener("pointerdown",()=>press(n));
   pad.appendChild(b);
 });
 
 function press(n){
-  if(entered.length>=6) return;
+  if(entered.length>=6)return;
   entered+=n;
   dots[entered.length-1].classList.add("fill");
-
   if(entered.length===6){
-    if(entered===सहीPIN){
+    if(entered===TRUE_PIN){
       lock.style.display="none";
+      loadData();
     }else{
       error.textContent="Şifre yanlış";
       setTimeout(resetPin,800);
@@ -114,65 +144,64 @@ function resetPin(){
   error.textContent="";
 }
 
-// ---------- UYGULAMA ----------
+/* ---------- APP ---------- */
 const addBtn=document.getElementById("addBtn");
 const form=document.getElementById("form");
 const saveBtn=document.getElementById("saveBtn");
 const list=document.getElementById("list");
 const search=document.getElementById("search");
 
-addBtn.addEventListener("click",()=>{
-  form.style.display = form.style.display==="block"?"none":"block";
-});
+addBtn.onclick=()=>{form.style.display=form.style.display==="block"?"none":"block";};
 
-// büyük harf otomatik
 ["label","search"].forEach(id=>{
   document.getElementById(id).addEventListener("input",e=>{
     e.target.value=e.target.value.toUpperCase();
   });
 });
 
-let data = JSON.parse(localStorage.getItem("zcp-data")||"[]");
-render();
+let data=[];
 
-saveBtn.addEventListener("click",()=>{
+async function loadData(){
+  data=[];
+  const snap=await getDocs(colRef);
+  snap.forEach(d=>data.push({id:d.id,...d.data()}));
+  render();
+}
+
+saveBtn.onclick=async()=>{
   const label=document.getElementById("label").value.trim().toUpperCase();
   const user=document.getElementById("user").value.trim();
   const pass=document.getElementById("pass").value.trim();
-  if(!label||!user||!pass) return;
+  if(!label||!user||!pass)return;
 
-  data.push({label,user,pass,open:false});
-  localStorage.setItem("zcp-data",JSON.stringify(data));
+  await addDoc(colRef,{label,user,pass});
   form.style.display="none";
   document.getElementById("label").value="";
   document.getElementById("user").value="";
   document.getElementById("pass").value="";
-  render();
-});
+  loadData();
+};
 
 function render(){
   const q=search.value.toUpperCase();
   list.innerHTML="";
-  data.filter(d=>d.label.includes(q)).forEach((d,i)=>{
+  data.filter(d=>d.label.includes(q)).forEach(d=>{
     const c=document.createElement("div");
     c.className="card";
 
     const left=document.createElement("span");
-    left.textContent=d.open?`${d.label} → ${d.user} / ${d.pass}`:d.label;
-    left.addEventListener("click",()=>{
-      d.open=!d.open;
-      localStorage.setItem("zcp-data",JSON.stringify(data));
-      render();
-    });
+    left.textContent=
+      d.label+"\n"+
+      "KULLANICI: "+d.user+"\n"+
+      "ŞİFRE: "+d.pass;
 
     const del=document.createElement("div");
     del.className="del";
     del.textContent="X";
-    del.addEventListener("click",()=>{
-      data.splice(i,1);
-      localStorage.setItem("zcp-data",JSON.stringify(data));
-      render();
-    });
+    del.onclick=async()=>{
+      await deleteDoc(doc(db,"zcp",d.id));
+      loadData();
+    };
 
     c.appendChild(left);
     c.appendChild(del);
@@ -180,6 +209,5 @@ function render(){
   });
 }
 </script>
-
 </body>
 </html>
