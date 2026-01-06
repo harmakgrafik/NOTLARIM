@@ -5,167 +5,262 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZCP</title>
 
+<!-- ========== FIREBASE (MODULE) ========== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+/* ---- Firebase config ---- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
+  authDomain: "notlarim-62876.firebaseapp.com",
+  projectId: "notlarim-62876",
+  storageBucket: "notlarim-62876.firebasestorage.app",
+  messagingSenderId: "742756530436",
+  appId: "1:742756530436:web:390887156b0d6d66b9f851"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+/* ------------------ PIN ------------------ */
+const PIN_CODE = "956251";
+
+/* ------------------ EKRANLAR ------------------ */
+const loginScreen = document.getElementById("loginScreen");
+const pinScreen   = document.getElementById("pinScreen");
+const appScreen   = document.getElementById("app");
+
+const loginBtn = document.getElementById("loginBtn");
+const loginErr = document.getElementById("loginError");
+
+/* ------------------ FIREBASE GİRİŞ ------------------ */
+loginBtn.onclick = async ()=>{
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass  = document.getElementById("loginPass").value.trim();
+  try{
+    await signInWithEmailAndPassword(auth, email, pass);
+    loginScreen.style.display="none";
+    pinScreen.style.display="flex";
+  }catch(e){
+    loginErr.style.display="block";
+  }
+};
+
+onAuthStateChanged(auth, user=>{
+  if(user){
+    loginScreen.style.display="none";
+    pinScreen.style.display="flex";
+  }
+});
+
+/* ------------------ PIN EKRANI ------------------ */
+let entered = "";
+const dots = document.querySelectorAll(".dot");
+const keys = document.querySelectorAll(".key");
+
+function resetPin(){
+  entered="";
+  dots.forEach(d=>d.classList.remove("on"));
+}
+
+keys.forEach(k=>{
+  k.addEventListener("click", ()=>{
+    if(entered.length>=6) return;
+    entered += k.dataset.n;
+    dots[entered.length-1].classList.add("on");
+
+    if(entered.length===6){
+      if(entered===PIN_CODE){
+        pinScreen.style.display="none";
+        appScreen.style.display="block";
+      }else{
+        alert("PIN yanlış");
+        resetPin();
+      }
+    }
+  });
+});
+
+/* ------------------ UYGULAMA ------------------ */
+const addBtn  = document.getElementById("addBtn");
+const form    = document.getElementById("form");
+const saveBtn = document.getElementById("saveBtn");
+const list    = document.getElementById("list");
+
+let items = JSON.parse(localStorage.getItem("zcp_items") || "[]");
+
+addBtn.onclick = ()=> {
+  form.style.display = form.style.display==="none" ? "block" : "none";
+};
+
+function saveLocal(){
+  localStorage.setItem("zcp_items", JSON.stringify(items));
+}
+
+function render(){
+  list.innerHTML="";
+  items.forEach((it,i)=>{
+    const c = document.createElement("div");
+    c.className="card";
+    c.draggable=true;
+
+    c.innerHTML = `
+      <div class="row">
+        <div class="label">${it.label}</div>
+        <button class="del">X</button>
+      </div>
+      <div class="details">
+        <div>Kullanıcı: ${it.user}</div>
+        <div>Şifre: ${it.pass}</div>
+      </div>
+    `;
+
+    c.onclick = (e)=>{
+      if(e.target.classList.contains("del")) return;
+      const d = c.querySelector(".details");
+      d.style.display = d.style.display==="none" ? "block" : "none";
+    };
+
+    c.querySelector(".del").onclick = ()=>{
+      items.splice(i,1);
+      saveLocal(); render();
+    };
+
+    c.addEventListener("dragstart", e=>{
+      e.dataTransfer.setData("text/plain", i);
+    });
+    c.addEventListener("dragover", e=>e.preventDefault());
+    c.addEventListener("drop", e=>{
+      e.preventDefault();
+      const from = +e.dataTransfer.getData("text/plain");
+      const to   = i;
+      if(from===to) return;
+      const moved = items.splice(from,1)[0];
+      items.splice(to,0,moved);
+      saveLocal(); render();
+    });
+
+    list.appendChild(c);
+  });
+}
+
+saveBtn.onclick = ()=>{
+  const label = document.getElementById("etiket").value.toUpperCase().trim();
+  const user  = document.getElementById("user").value.trim();
+  const pass  = document.getElementById("pass").value.trim();
+
+  if(!label||!user||!pass){ alert("Hepsini doldur"); return; }
+
+  items.unshift({label,user,pass});
+  saveLocal(); render();
+
+  document.getElementById("etiket").value="";
+  document.getElementById("user").value="";
+  document.getElementById("pass").value="";
+  form.style.display="none";
+};
+
+render();
+</script>
+
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:#0f1115;
-  color:#eee;
-}
+body{margin:0;font-family:Arial;background:#0f1115;color:#eee}
 
-/* ---------- GİRİŞ EKRANI ---------- */
-#loginScreen{
-  position:fixed;
-  inset:0;
+/* ---- GİRİŞ ---- */
+.screen{
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
   background:#0f1115;
-  display:flex;
-  align-items:center;
-  justify-content:center;
 }
-#loginBox{
-  width:280px;
-  background:#151922;
-  border:1px solid #222;
-  border-radius:12px;
-  padding:20px;
+.box{
+  width:300px;background:#151922;border:1px solid #222;
+  border-radius:12px;padding:20px;
 }
-#loginBox h2{
-  margin-top:0;
-  text-align:center;
+.box h2{margin:0 0 10px;text-align:center}
+.inp{
+  width:100%;margin:6px 0;padding:10px;
+  border-radius:8px;border:1px solid #333;
+  background:#1a1d24;color:#fff
 }
-.loginInput{
-  width:100%;
-  margin:8px 0;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid #333;
-  background:#1a1d24;
-  color:#fff;
+.btn{
+  width:100%;padding:10px;border:none;border-radius:8px;
+  background:#1f2933;color:#fff;cursor:pointer
 }
-#loginBtn{
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#1f2933;   /* koyu buton */
-  color:#fff;
-  cursor:pointer;
-}
-#loginError{
-  color:#ff5c5c;
-  font-size:13px;
-  text-align:center;
-  display:none;
-}
+.err{color:#ff5c5c;font-size:13px;text-align:center;display:none}
 
-/* ---------- ANA UYGULAMA ---------- */
+/* ---- PIN ---- */
+#pinScreen{display:none;flex-direction:column}
+.dots{display:flex;gap:8px;margin-bottom:14px}
+.dot{width:10px;height:10px;border:1px solid #555;border-radius:50%}
+.dot.on{background:#fff}
+.pad{display:grid;grid-template-columns:repeat(3,60px);gap:10px}
+.key{
+  width:60px;height:60px;border-radius:50%;
+  background:#1a1d24;border:1px solid #333;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer
+}
+.key.zero{grid-column:2}
+
+/* ---- APP ---- */
 #app{display:none}
-
 header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:12px 16px;
-  border-bottom:1px solid #222;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border-bottom:1px solid #222
 }
-
-h1{margin:0;font-size:20px}
-
-#addBtn{
-  background:#1f2933;
-  border:none;
-  color:#fff;
-  border-radius:8px;
-  padding:8px 12px;
-  font-size:18px;
-  cursor:pointer;
-}
-
-#form{
-  display:none;
-  padding:12px 16px;
-  border-bottom:1px solid #222;
-}
-
-input{
-  width:100%;
-  margin:6px 0;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid #333;
-  background:#1a1d24;
-  color:#fff;
-}
-
-/* KAYDET BUTONU – KOYU */
-#saveBtn{
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#1f2933;   /* koyu renk */
-  color:#fff;
-  font-weight:bold;
-  cursor:pointer;
-}
-
+#addBtn{background:#1f2933;border:none;color:#fff;border-radius:8px;padding:8px 12px;font-size:18px}
+#form{display:none;padding:12px 16px;border-bottom:1px solid #222}
+input{width:100%;margin:6px 0;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1d24;color:#fff}
+#saveBtn{width:100%;padding:10px;border:none;border-radius:8px;background:#1f2933;color:#fff;font-weight:bold}
 #list{padding:12px}
-
-.card{
-  background:#151922;
-  border:1px solid #222;
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:8px;
-  cursor:grab;
-}
-
-.row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.label{
-  font-weight:bold;
-  letter-spacing:1px;
-}
-
-.details{
-  display:none;
-  margin-top:6px;
-  color:#cbd5ff;
-  font-size:14px;
-}
-
-.del{
-  background:#ff3b3b;
-  border:none;
-  color:#fff;
-  border-radius:6px;
-  padding:4px 8px;
-  cursor:pointer;
-}
+.card{background:#151922;border:1px solid #222;border-radius:12px;padding:10px;margin-bottom:8px;cursor:grab}
+.row{display:flex;justify-content:space-between;align-items:center}
+.label{font-weight:bold;letter-spacing:1px}
+.details{display:none;margin-top:6px;color:#cbd5ff;font-size:14px}
+.del{background:#ff3b3b;border:none;color:#fff;border-radius:6px;padding:4px 8px}
 </style>
 </head>
 
 <body>
 
-<!-- ========== GİRİŞ EKRANI ========== -->
-<div id="loginScreen">
-  <div id="loginBox">
+<!-- ===== FIREBASE GİRİŞ ===== -->
+<div id="loginScreen" class="screen">
+  <div class="box">
     <h2>Giriş</h2>
-    <input id="loginUser" class="loginInput" placeholder="Kullanıcı adı">
-    <input id="loginPass" class="loginInput" type="password" placeholder="Şifre">
-    <button id="loginBtn">Giriş yap</button>
-    <div id="loginError">Bilgiler yanlış</div>
+    <input id="loginEmail" class="inp" placeholder="Email">
+    <input id="loginPass" class="inp" type="password" placeholder="Şifre">
+    <button id="loginBtn" class="btn">Giriş</button>
+    <div id="loginError" class="err">Bilgiler yanlış</div>
   </div>
 </div>
 
-<!-- ========== ANA UYGULAMA ========== -->
-<div id="app">
+<!-- ===== PIN ===== -->
+<div id="pinScreen" class="screen">
+  <div class="box" style="text-align:center">
+    <h2>PIN</h2>
+    <div class="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="pad">
+      <div class="key" data-n="7">7</div>
+      <div class="key" data-n="8">8</div>
+      <div class="key" data-n="9">9</div>
+      <div class="key" data-n="4">4</div>
+      <div class="key" data-n="5">5</div>
+      <div class="key" data-n="6">6</div>
+      <div class="key" data-n="1">1</div>
+      <div class="key" data-n="2">2</div>
+      <div class="key" data-n="3">3</div>
+      <div class="key zero" data-n="0">0</div>
+    </div>
+  </div>
+</div>
 
+<!-- ===== APP ===== -->
+<div id="app">
 <header>
   <h1>ZCP</h1>
   <button id="addBtn">+</button>
@@ -179,126 +274,7 @@ input{
 </div>
 
 <div id="list"></div>
-
 </div>
-
-<script>
-/* ================== GİRİŞ SİSTEMİ ================== */
-// örnek sabit giriş bilgileri
-const صحیح_USER = "admin";
-const صحیح_PASS = "123456";
-
-const loginScreen = document.getElementById("loginScreen");
-const app         = document.getElementById("app");
-const loginBtn    = document.getElementById("loginBtn");
-const loginError  = document.getElementById("loginError");
-
-loginBtn.onclick = ()=>{
-  const u = document.getElementById("loginUser").value.trim();
-  const p = document.getElementById("loginPass").value.trim();
-
-  if(u === صحیح_USER && p === صحیح_PASS){
-    loginScreen.style.display = "none";
-    app.style.display = "block";
-  }else{
-    loginError.style.display = "block";
-  }
-};
-
-/* ================== UYGULAMA ================== */
-const addBtn  = document.getElementById("addBtn");
-const form    = document.getElementById("form");
-const saveBtn = document.getElementById("saveBtn");
-const list    = document.getElementById("list");
-
-let items = JSON.parse(localStorage.getItem("zcp_items") || "[]");
-
-addBtn.onclick = ()=>{
-  form.style.display = form.style.display === "none" ? "block" : "none";
-};
-
-function saveLocal(){
-  localStorage.setItem("zcp_items", JSON.stringify(items));
-}
-
-function render(){
-  list.innerHTML = "";
-
-  items.forEach((it,i)=>{
-    const c = document.createElement("div");
-    c.className = "card";
-    c.draggable = true;
-
-    c.innerHTML = `
-      <div class="row">
-        <div class="label">${it.label}</div>
-        <button class="del">X</button>
-      </div>
-      <div class="details">
-        <div>Kullanıcı: ${it.user}</div>
-        <div>Şifre: ${it.pass}</div>
-      </div>
-    `;
-
-    // karta tıkla → detay aç/kapat
-    c.onclick = (e)=>{
-      if(e.target.classList.contains("del")) return;
-      const d = c.querySelector(".details");
-      d.style.display = d.style.display === "none" ? "block" : "none";
-    };
-
-    // sil
-    c.querySelector(".del").onclick = ()=>{
-      items.splice(i,1);
-      saveLocal();
-      render();
-    };
-
-    // sürükle
-    c.addEventListener("dragstart", e=>{
-      e.dataTransfer.setData("text/plain", i);
-    });
-    c.addEventListener("dragover", e=> e.preventDefault());
-    c.addEventListener("drop", e=>{
-      e.preventDefault();
-      const from = +e.dataTransfer.getData("text/plain");
-      const to   = i;
-      if(from === to) return;
-
-      const moved = items.splice(from,1)[0];
-      items.splice(to,0,moved);
-      saveLocal();
-      render();
-    });
-
-    list.appendChild(c);
-  });
-}
-
-// kaydet
-saveBtn.onclick = ()=>{
-  const label = document.getElementById("etiket").value.toUpperCase().trim();
-  const user  = document.getElementById("user").value.trim();
-  const pass  = document.getElementById("pass").value.trim();
-
-  if(!label || !user || !pass){
-    alert("Hepsini doldur");
-    return;
-  }
-
-  // yeni kayıt EN ÜSTE
-  items.unshift({label,user,pass});
-  saveLocal();
-  render();
-
-  document.getElementById("etiket").value="";
-  document.getElementById("user").value="";
-  document.getElementById("pass").value="";
-  form.style.display="none";
-};
-
-render();
-</script>
 
 </body>
 </html>
