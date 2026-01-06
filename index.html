@@ -3,228 +3,183 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZCP Vault</title>
-
+<title>ZCP</title>
 <style>
-body{margin:0;background:#121212;color:#fff;font-family:Arial}
-#lock{position:fixed;inset:0;background:#0d0d0d;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9}
-.dots{display:flex;gap:12px;margin-bottom:30px}
-.dot{width:16px;height:16px;border:2px solid #777;border-radius:50%}
-.dot.filled{background:#fff;border-color:#fff}
-
-.pad{display:grid;grid-template-columns:repeat(3,80px);gap:16px}
-.key{
-  width:80px;height:80px;border-radius:50%;
-  background:#1f1f1f;border:1px solid #444;
-  display:flex;align-items:center;justify-content:center;
-  font-size:26px;
-  cursor:pointer;
-  user-select:none;
-  touch-action:manipulation;
+*{box-sizing:border-box;font-family:Arial}
+body{margin:0;background:#0f1115;color:#fff}
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;background:#151821;
 }
-.key:active{background:#333}
+#logo{font-size:22px;font-weight:bold}
+#addBtn{font-size:26px;cursor:pointer}
 
-/* APP */
-.app{max-width:900px;margin:20px auto;padding:0 16px;display:none}
-.header{display:flex;justify-content:space-between;align-items:center}
-.add-btn{background:#1f1f1f;color:#fff;border:1px solid #444;border-radius:6px;font-size:22px;width:40px;height:40px}
-#search{width:100%;padding:10px;margin:12px 0;background:#1f1f1f;color:#fff;border:1px solid #333;font-size:16px}
-.form{display:none;border:1px solid #333;padding:12px;border-radius:8px;margin-bottom:16px;background:#1a1a1a}
-input{width:100%;padding:10px;margin:6px 0;background:#222;color:#fff;border:1px solid #333;font-size:16px}
-button.save{padding:10px 16px;margin-top:8px;background:#2e7dff;border:none;color:#fff;border-radius:6px}
+#search{width:100%;padding:10px;margin:10px;border-radius:6px;border:none}
 
-.card{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;margin-top:10px;position:relative}
-.card-title{font-weight:bold;font-size:18px}
-.delete-btn{position:absolute;right:10px;top:8px;background:#b00020;color:#fff;border:none;border-radius:50%;width:26px;height:26px}
-.details{display:none;margin-top:8px;font-size:15px;word-break:break-all}
+#form{display:none;padding:10px}
+#form input{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none}
+
+#saveBtn{width:100%;padding:10px;border:none;border-radius:6px;background:#3b82f6;color:#fff}
+
+#list{padding:10px}
+.card{
+  background:#1b1f2a;margin-bottom:8px;padding:10px;border-radius:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.card span{cursor:pointer}
+.del{color:#f87171;font-weight:bold;cursor:pointer}
+
+/* PIN */
+#lock{
+  position:fixed;inset:0;background:#0f1115;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+}
+#dots{display:flex;gap:10px;margin-bottom:20px}
+.dot{width:12px;height:12px;border:2px solid #555;border-radius:50%}
+.dot.fill{background:#fff;border-color:#fff}
+
+#pad{display:grid;grid-template-columns:repeat(3,70px);gap:12px}
+.key{
+  width:70px;height:70px;border-radius:50%;
+  background:#1b1f2a;display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer;user-select:none;
+}
+.key.zero{grid-column:2}
+#error{color:#f87171;margin-top:10px;height:20px}
 </style>
 </head>
 <body>
 
-<!-- 🔒 KİLİT -->
+<!-- KİLİT EKRANI -->
 <div id="lock">
-  <div class="dots" id="dots"></div>
-  <div class="pad" id="pad"></div>
+  <div id="dots">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div id="pad"></div>
+  <div id="error"></div>
 </div>
 
-<!-- 🔓 APP -->
-<div class="app" id="app">
-  <div class="header">
-    <h1>ZCP</h1>
-    <button class="add-btn" onclick="toggleForm()">+</button>
-  </div>
+<header>
+  <div id="logo">ZCP</div>
+  <div id="addBtn">+</div>
+</header>
 
-  <input id="search" type="text" placeholder="ETİKET ARA">
+<input id="search" placeholder="ARA..." />
 
-  <div class="form" id="form">
-    <input id="etiket" type="text" placeholder="ETİKET">
-    <input id="username" type="text" placeholder="KULLANICI ADI / E-POSTA">
-    <input id="password" type="text" placeholder="PAROLA">
-    <button class="save" onclick="saveEntry()">Kaydet</button>
-  </div>
-
-  <div id="list"></div>
+<div id="form">
+  <input id="label" placeholder="ETİKET">
+  <input id="user" placeholder="KULLANICI ADI">
+  <input id="pass" placeholder="PAROLA">
+  <button id="saveBtn">Kaydet</button>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
-from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+<div id="list"></div>
 
-/* Firebase */
-const firebaseConfig = {
-  apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
-  authDomain: "notlarim-62876.firebaseapp.com",
-  projectId: "notlarim-62876",
-  storageBucket: "notlarim-62876.firebasestorage.app",
-  messagingSenderId: "742756530436",
-  appId: "1:742756530436:web:390887156b0d6d66b9f851"
-};
-const appFB = initializeApp(firebaseConfig);
-const db = getFirestore(appFB);
+<script>
+// ---------- PIN ----------
+const सहीPIN = "956251";
+let entered = "";
+const dots = document.querySelectorAll(".dot");
+const lock = document.getElementById("lock");
+const pad = document.getElementById("pad");
+const error = document.getElementById("error");
 
-/* PIN */
-const REAL_PIN="956251";
-let entered="";
-const dotsEl=document.getElementById("dots");
-const padEl=document.getElementById("pad");
-const lockEl=document.getElementById("lock");
-const appEl=document.getElementById("app");
-
-for(let i=0;i<6;i++){const d=document.createElement("div");d.className="dot";dotsEl.appendChild(d);}
-[7,8,9,4,5,6,1,2,3,"",0,""].forEach(n=>{
+// Tuş dizilimi: 789 / 456 / 123 / 0
+["7","8","9","4","5","6","1","2","3","0"].forEach(n=>{
   const b=document.createElement("div");
-  if(n===""){b.style.visibility="hidden";}
-  else{
-    b.className="key";
-    b.innerText=n;
-    b.addEventListener("click",()=>press(n));
-    b.addEventListener("touchstart",()=>press(n));
-  }
-  padEl.appendChild(b);
+  b.className="key"+(n==="0"?" zero":"");
+  b.textContent=n;
+  b.addEventListener("pointerdown",()=>press(n)); // TEK OLAY = çift yazma yok
+  pad.appendChild(b);
 });
 
 function press(n){
   if(entered.length>=6) return;
   entered+=n;
-  updateDots();
+  dots[entered.length-1].classList.add("fill");
+
   if(entered.length===6){
-    if(entered===REAL_PIN){
-      lockEl.style.display="none";
-      appEl.style.display="block";
-      loadData();
+    if(entered===सहीPIN){
+      lock.style.display="none";
     }else{
-      alert("PIN yanlış!");
-      entered="";
-      updateDots();
+      error.textContent="Şifre yanlış";
+      setTimeout(resetPin,800);
     }
   }
 }
-function updateDots(){
-  document.querySelectorAll(".dot").forEach((d,i)=>d.classList.toggle("filled",i<entered.length));
+function resetPin(){
+  entered="";
+  dots.forEach(d=>d.classList.remove("fill"));
+  error.textContent="";
 }
 
-/* APP */
+// ---------- UYGULAMA ----------
+const addBtn=document.getElementById("addBtn");
 const form=document.getElementById("form");
-const listEl=document.getElementById("list");
-const searchEl=document.getElementById("search");
-const etiketEl=document.getElementById("etiket");
+const saveBtn=document.getElementById("saveBtn");
+const list=document.getElementById("list");
+const search=document.getElementById("search");
 
-etiketEl.oninput=e=>e.target.value=e.target.value.toUpperCase();
-searchEl.oninput=e=>{e.target.value=e.target.value.toUpperCase();render();};
+addBtn.addEventListener("click",()=>{
+  form.style.display = form.style.display==="block"?"none":"block";
+});
 
-function toggleForm(){
-  form.style.display=form.style.display==="none"?"block":"none";
-}
+// büyük harf otomatik
+["label","search"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",e=>{
+    e.target.value=e.target.value.toUpperCase();
+  });
+});
 
-/* Basit şifreleme */
-async function enc(t){
-  const e=new TextEncoder();
-  const k=await crypto.subtle.digest("SHA-256",e.encode(REAL_PIN));
-  const iv=crypto.getRandomValues(new Uint8Array(12));
-  const key=await crypto.subtle.importKey("raw",k,{name:"AES-GCM"},false,["encrypt","decrypt"]);
-  const c=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,e.encode(t));
-  return {iv:[...iv],d:[...new Uint8Array(c)]};
-}
-async function dec(o){
-  const e=new TextEncoder();
-  const k=await crypto.subtle.digest("SHA-256",e.encode(REAL_PIN));
-  const key=await crypto.subtle.importKey("raw",k,{name:"AES-GCM"},false,["encrypt","decrypt"]);
-  const p=await crypto.subtle.decrypt({name:"AES-GCM",iv:new Uint8Array(o.iv)},key,new Uint8Array(o.d));
-  return new TextDecoder().decode(p);
-}
+let data = JSON.parse(localStorage.getItem("zcp-data")||"[]");
+render();
 
-/* Firestore */
-let cache=[];
+saveBtn.addEventListener("click",()=>{
+  const label=document.getElementById("label").value.trim().toUpperCase();
+  const user=document.getElementById("user").value.trim();
+  const pass=document.getElementById("pass").value.trim();
+  if(!label||!user||!pass) return;
 
-async function saveEntry(){
-  const etiket=etiketEl.value.trim();
-  const u=document.getElementById("username").value.trim();
-  const p=document.getElementById("password").value.trim();
-  if(!etiket||!u||!p){alert("Tüm alanları doldur");return;}
-
-  const eu=await enc(u);
-  const ep=await enc(p);
-
-  await addDoc(collection(db,"vault"),{etiket,eu,ep});
-  etiketEl.value="";
-  document.getElementById("username").value="";
-  document.getElementById("password").value="";
-  loadData();
-}
-
-async function loadData(){
-  const snap=await getDocs(collection(db,"vault"));
-  cache=[];
-  snap.forEach(d=>cache.push({id:d.id,...d.data()}));
+  data.push({label,user,pass,open:false});
+  localStorage.setItem("zcp-data",JSON.stringify(data));
+  form.style.display="none";
+  document.getElementById("label").value="";
+  document.getElementById("user").value="";
+  document.getElementById("pass").value="";
   render();
-}
+});
 
-async function deleteEntry(id){
-  await deleteDoc(doc(db,"vault",id));
-  loadData();
-}
-
-/* Liste */
 function render(){
-  const q=searchEl.value;
-  listEl.innerHTML="";
-  cache.forEach(item=>{
-    if(q && !item.etiket.includes(q)) return;
+  const q=search.value.toUpperCase();
+  list.innerHTML="";
+  data.filter(d=>d.label.includes(q)).forEach((d,i)=>{
+    const c=document.createElement("div");
+    c.className="card";
 
-    const card=document.createElement("div");
-    card.className="card";
+    const left=document.createElement("span");
+    left.textContent=d.open?`${d.label} → ${d.user} / ${d.pass}`:d.label;
+    left.addEventListener("click",()=>{
+      d.open=!d.open;
+      localStorage.setItem("zcp-data",JSON.stringify(data));
+      render();
+    });
 
-    const title=document.createElement("div");
-    title.className="card-title";
-    title.innerText=item.etiket;
+    const del=document.createElement("div");
+    del.className="del";
+    del.textContent="X";
+    del.addEventListener("click",()=>{
+      data.splice(i,1);
+      localStorage.setItem("zcp-data",JSON.stringify(data));
+      render();
+    });
 
-    const del=document.createElement("button");
-    del.className="delete-btn";
-    del.innerText="X";
-    del.onclick=e=>{e.stopPropagation();deleteEntry(item.id);};
-
-    const details=document.createElement("div");
-    details.className="details";
-
-    let open=false;
-    card.onclick=async ()=>{
-      if(!open){
-        const u=await dec(item.eu);
-        const p=await dec(item.ep);
-        details.innerHTML=`<div><b>Kullanıcı:</b> ${u}</div><div><b>Şifre:</b> ${p}</div>`;
-        details.style.display="block";open=true;
-      }else{
-        details.style.display="none";open=false;
-      }
-    };
-
-    card.appendChild(title);
-    card.appendChild(del);
-    card.appendChild(details);
-    listEl.appendChild(card);
+    c.appendChild(left);
+    c.appendChild(del);
+    list.appendChild(c);
   });
 }
 </script>
+
 </body>
 </html>
