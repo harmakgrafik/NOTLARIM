@@ -72,7 +72,7 @@ header{
 </head>
 <body>
 
-<!-- ================= LOGIN ================= -->
+<!-- LOGIN -->
 <div id="loginScreen" class="screen">
   <div id="loginBox">
     <h2>Giriş</h2>
@@ -83,7 +83,7 @@ header{
   </div>
 </div>
 
-<!-- ================= PIN ================= -->
+<!-- PIN -->
 <div id="pinScreen" class="screen hidden">
   <div id="dots">
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
@@ -93,7 +93,7 @@ header{
   <div id="pinErr"></div>
 </div>
 
-<!-- ================= APP ================= -->
+<!-- APP -->
 <div id="app" class="hidden">
   <header>
     <div id="logo">ZCP</div>
@@ -112,7 +112,6 @@ header{
   <div id="list"></div>
 </div>
 
-<!-- ================= FIREBASE ================= -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
@@ -120,7 +119,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* --- Firebase config --- */
+/* Firebase */
 const firebaseConfig = {
   apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
   authDomain: "notlarim-62876.firebaseapp.com",
@@ -135,7 +134,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const colRef = collection(db,"zcp");
 
-/* ================= LOGIN ================= */
+/* ---------- LOGIN ---------- */
 const loginScreen = document.getElementById("loginScreen");
 const pinScreen   = document.getElementById("pinScreen");
 const appScreen   = document.getElementById("app");
@@ -165,19 +164,18 @@ onAuthStateChanged(auth, user=>{
   }
 });
 
-/* ================= PIN ================= */
+/* ---------- PIN ---------- */
 const TRUE_PIN="956251";
 let entered="";
 const dots=document.querySelectorAll(".dot");
 const pad=document.getElementById("pad");
 const pinErr=document.getElementById("pinErr");
 
-/* Tuş dizilimi: 789 / 456 / 123 / 0 */
 ["7","8","9","4","5","6","1","2","3","0"].forEach(n=>{
   const b=document.createElement("div");
   b.className="key"+(n==="0"?" zero":"");
   b.textContent=n;
-  b.addEventListener("pointerdown",()=>press(n)); // tek olay = çift basma yok
+  b.addEventListener("pointerdown",()=>press(n));
   pad.appendChild(b);
 });
 
@@ -202,7 +200,7 @@ function resetPin(){
   pinErr.textContent="";
 }
 
-/* ================= APP ================= */
+/* ---------- APP ---------- */
 const addBtn=document.getElementById("addBtn");
 const form=document.getElementById("form");
 const saveBtn=document.getElementById("saveBtn");
@@ -222,7 +220,7 @@ let data=[];
 async function loadData(){
   data=[];
   const snap=await getDocs(colRef);
-  snap.forEach(d=>data.push({id:d.id,...d.data()}));
+  snap.forEach(d=>data.push({id:d.id,...d.data(),open:false}));
   render();
 }
 
@@ -243,15 +241,26 @@ saveBtn.onclick=async()=>{
 function render(){
   const q=search.value.toUpperCase();
   list.innerHTML="";
+
   data.filter(d=>d.label.includes(q)).forEach(d=>{
     const c=document.createElement("div");
     c.className="card";
 
     const left=document.createElement("span");
-    left.textContent =
-      d.label + "\n" +
-      "KULLANICI: " + d.user + "\n" +
-      "ŞİFRE: " + d.pass;
+
+    if(d.open){
+      left.textContent =
+        d.label + "\n" +
+        "KULLANICI: " + d.user + "\n" +
+        "ŞİFRE: " + d.pass;
+    }else{
+      left.textContent = d.label;
+    }
+
+    left.onclick=()=>{
+      d.open=!d.open;
+      render();
+    };
 
     const del=document.createElement("div");
     del.className="del";
