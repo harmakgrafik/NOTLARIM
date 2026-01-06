@@ -14,6 +14,54 @@ body{
   color:#eee;
 }
 
+/* ---------- GİRİŞ EKRANI ---------- */
+#loginScreen{
+  position:fixed;
+  inset:0;
+  background:#0f1115;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#loginBox{
+  width:280px;
+  background:#151922;
+  border:1px solid #222;
+  border-radius:12px;
+  padding:20px;
+}
+#loginBox h2{
+  margin-top:0;
+  text-align:center;
+}
+.loginInput{
+  width:100%;
+  margin:8px 0;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #333;
+  background:#1a1d24;
+  color:#fff;
+}
+#loginBtn{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#1f2933;   /* koyu buton */
+  color:#fff;
+  cursor:pointer;
+}
+#loginError{
+  color:#ff5c5c;
+  font-size:13px;
+  text-align:center;
+  display:none;
+}
+
+/* ---------- ANA UYGULAMA ---------- */
+#app{display:none}
+
 header{
   display:flex;
   justify-content:space-between;
@@ -22,13 +70,10 @@ header{
   border-bottom:1px solid #222;
 }
 
-h1{
-  margin:0;
-  font-size:20px;
-}
+h1{margin:0;font-size:20px}
 
 #addBtn{
-  background:#2563eb;
+  background:#1f2933;
   border:none;
   color:#fff;
   border-radius:8px;
@@ -53,20 +98,19 @@ input{
   color:#fff;
 }
 
+/* KAYDET BUTONU – KOYU */
 #saveBtn{
   width:100%;
   padding:10px;
   border:none;
   border-radius:8px;
-  background:#22c55e;
-  color:#062b12;
+  background:#1f2933;   /* koyu renk */
+  color:#fff;
   font-weight:bold;
   cursor:pointer;
 }
 
-#list{
-  padding:12px;
-}
+#list{padding:12px}
 
 .card{
   background:#151922;
@@ -108,6 +152,20 @@ input{
 
 <body>
 
+<!-- ========== GİRİŞ EKRANI ========== -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <h2>Giriş</h2>
+    <input id="loginUser" class="loginInput" placeholder="Kullanıcı adı">
+    <input id="loginPass" class="loginInput" type="password" placeholder="Şifre">
+    <button id="loginBtn">Giriş yap</button>
+    <div id="loginError">Bilgiler yanlış</div>
+  </div>
+</div>
+
+<!-- ========== ANA UYGULAMA ========== -->
+<div id="app">
+
 <header>
   <h1>ZCP</h1>
   <button id="addBtn">+</button>
@@ -122,15 +180,40 @@ input{
 
 <div id="list"></div>
 
+</div>
+
 <script>
-const addBtn = document.getElementById("addBtn");
-const form   = document.getElementById("form");
-const saveBtn= document.getElementById("saveBtn");
-const list   = document.getElementById("list");
+/* ================== GİRİŞ SİSTEMİ ================== */
+// örnek sabit giriş bilgileri
+const صحیح_USER = "admin";
+const صحیح_PASS = "123456";
+
+const loginScreen = document.getElementById("loginScreen");
+const app         = document.getElementById("app");
+const loginBtn    = document.getElementById("loginBtn");
+const loginError  = document.getElementById("loginError");
+
+loginBtn.onclick = ()=>{
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPass").value.trim();
+
+  if(u === صحیح_USER && p === صحیح_PASS){
+    loginScreen.style.display = "none";
+    app.style.display = "block";
+  }else{
+    loginError.style.display = "block";
+  }
+};
+
+/* ================== UYGULAMA ================== */
+const addBtn  = document.getElementById("addBtn");
+const form    = document.getElementById("form");
+const saveBtn = document.getElementById("saveBtn");
+const list    = document.getElementById("list");
 
 let items = JSON.parse(localStorage.getItem("zcp_items") || "[]");
 
-addBtn.onclick = () => {
+addBtn.onclick = ()=>{
   form.style.display = form.style.display === "none" ? "block" : "none";
 };
 
@@ -145,7 +228,6 @@ function render(){
     const c = document.createElement("div");
     c.className = "card";
     c.draggable = true;
-    c.dataset.i = i;
 
     c.innerHTML = `
       <div class="row">
@@ -158,7 +240,7 @@ function render(){
       </div>
     `;
 
-    // kart tıkla → detay aç/kapat
+    // karta tıkla → detay aç/kapat
     c.onclick = (e)=>{
       if(e.target.classList.contains("del")) return;
       const d = c.querySelector(".details");
@@ -172,15 +254,11 @@ function render(){
       render();
     };
 
-    // sürükle başla
+    // sürükle
     c.addEventListener("dragstart", e=>{
       e.dataTransfer.setData("text/plain", i);
     });
-
-    // üstüne gelince izin ver
     c.addEventListener("dragover", e=> e.preventDefault());
-
-    // bırakınca yer değiştir
     c.addEventListener("drop", e=>{
       e.preventDefault();
       const from = +e.dataTransfer.getData("text/plain");
@@ -197,7 +275,7 @@ function render(){
   });
 }
 
-// kaydet butonu
+// kaydet
 saveBtn.onclick = ()=>{
   const label = document.getElementById("etiket").value.toUpperCase().trim();
   const user  = document.getElementById("user").value.trim();
