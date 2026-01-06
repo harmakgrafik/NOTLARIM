@@ -2,293 +2,286 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Notlarım</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<title>ZCP Vault</title>
 <style>
-body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  font-family:Arial,Helvetica,sans-serif;
-}
-.wrap{
-  max-width:900px;
-  margin:auto;
-  padding:15px;
-}
-input, textarea, button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border:none;
-  border-radius:6px;
-  font-size:14px;
-}
-textarea{min-height:90px}
-button{
-  background:#444;
-  color:#fff;
-  cursor:pointer;
-}
-.row{
-  display:flex;
-  gap:6px;
-}
-.row button{flex:1}
+body{margin:0;background:#121212;color:#fff;font-family:Arial}
 .hidden{display:none}
-.small{font-size:12px;color:#aaa}
 
-/* BAŞLIK */
-h2{
-  display:flex;
-  align-items:center;
-  gap:10px;
+/* ===== LOCK SCREEN ===== */
+#lock{
+  position:fixed;inset:0;background:#0d0d0d;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:9999;
 }
+.dots{display:flex;gap:12px;margin-bottom:30px}
+.dot{width:14px;height:14px;border:2px solid #777;border-radius:50%}
+.dot.filled{background:#fff;border-color:#fff}
 
-/* KLASÖRLER */
-#folders{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin:10px 0;
-}
-.folder{
-  background:#555;
-  padding:8px 14px;
-  border-radius:20px;
-  cursor:pointer;
-}
-.folder.active{
-  border:2px solid #fff;
-  background:#777;
-  box-shadow:0 0 8px rgba(255,255,255,.6);
-}
-
-/* NOTLAR */
-#notes{
+.pad{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-  gap:12px;
+  grid-template-columns:repeat(3,70px);
+  gap:15px;
 }
-.note{
-  background:#6b6b6b;
-  color:#000;
-  padding:12px;
-  border-radius:6px;
-  min-height:120px;
-  box-shadow:2px 3px 6px rgba(0,0,0,.5);
-  cursor:pointer;
-  white-space:pre-wrap; /* paragraf */
+.key{
+  width:70px;height:70px;border-radius:50%;
+  background:#1f1f1f;border:1px solid #444;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;cursor:pointer;
 }
-.note.selected{
-  outline:3px solid #fff;
-}
+.key:hover{background:#2a2a2a}
+
+/* ===== APP ===== */
+.app{max-width:800px;margin:30px auto;padding:0 20px}
+.header{display:flex;justify-content:space-between;align-items:center}
+.add-btn{background:#1f1f1f;color:#fff;border:1px solid #444;border-radius:6px;font-size:20px;width:36px;height:36px;cursor:pointer}
+#search{width:100%;padding:8px;margin:12px 0;background:#1f1f1f;color:#fff;border:1px solid #333}
+.form{display:none;border:1px solid #333;padding:12px;border-radius:8px;margin-bottom:16px;background:#1a1a1a}
+input{width:100%;padding:8px;margin:6px 0;background:#222;color:#fff;border:1px solid #333}
+button.save{padding:8px 14px;margin-top:8px;background:#2e7dff;border:none;color:#fff;border-radius:6px;cursor:pointer}
+
+.card{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;margin-top:10px;position:relative;cursor:pointer}
+.card-title{font-weight:bold}
+.delete-btn{position:absolute;right:10px;top:8px;background:#b00020;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer}
+.details{display:none;margin-top:8px;font-size:14px;word-break:break-all}
 </style>
 </head>
-
 <body>
-<div class="wrap">
 
-<!-- GİRİŞ -->
-<div id="loginBox">
-  <h2>Giriş</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Şifre">
-  <button onclick="login()">Giriş</button>
+<!-- 🔒 KİLİT EKRANI -->
+<div id="lock">
+  <div class="dots" id="dots"></div>
+  <div class="pad" id="pad"></div>
 </div>
 
-<!-- UYGULAMA -->
-<div id="appBox" class="hidden">
-  <h2>
-    NOTLARIM
-    <button onclick="togglePanel()">+</button>
-  </h2>
-  <div class="small">Tasarımcı: Zeynel Can PAKIR</div>
-
-  <!-- EKLEME PANELİ -->
-  <div id="panel" class="hidden">
-    <textarea id="noteText" placeholder="Not yaz (Enter = paragraf)"></textarea>
-
-    <div class="row">
-      <button onclick="addNote()">+ Not Ekle</button>
-      <button onclick="deleteNote()">- Not Sil</button>
-    </div>
-
-    <div class="row">
-      <button onclick="addFolder()">+ Klasör</button>
-      <button onclick="deleteFolder()">- Klasör</button>
-    </div>
+<!-- 🔓 UYGULAMA -->
+<div class="app" id="app" style="display:none">
+  <div class="header">
+    <h1>ZCP</h1>
+    <button class="add-btn" onclick="toggleForm()">+</button>
   </div>
 
-  <h3>Klasörler</h3>
-  <div id="folders"></div>
+  <input id="search" type="text" placeholder="ETİKET ARA">
 
-  <h3>Notlar</h3>
-  <div id="notes"></div>
+  <div class="form" id="form">
+    <input id="etiket" type="text" placeholder="ETİKET">
+    <input id="username" type="text" placeholder="KULLANICI ADI / E-POSTA">
+    <input id="password" type="text" placeholder="PAROLA">
+    <button class="save" onclick="saveEntry()">Kaydet</button>
+  </div>
+
+  <div id="list"></div>
 </div>
 
-</div>
+<script>
+/* =================================================
+   🔐 PIN SISTEMI
+================================================= */
+const REAL_PIN = "956251";
+let entered = "";
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const dotsEl = document.getElementById("dots");
+const padEl  = document.getElementById("pad");
+const lockEl = document.getElementById("lock");
+const appEl  = document.getElementById("app");
 
-/* 🔥 Firebase Ayarların */
-const firebaseConfig = {
-  apiKey: "AIzaSyAPfTIRvh-BEuR2sfdecN3vmiMmzKoH3LM",
-  authDomain: "notlarim-62876.firebaseapp.com",
-  projectId: "notlarim-62876",
-  storageBucket: "notlarim-62876.firebasestorage.app",
-  messagingSenderId: "742756530436",
-  appId: "1:742756530436:web:390887156b0d6d66b9f851"
-};
+/* 6 nokta oluştur */
+for(let i=0;i<6;i++){
+  const d=document.createElement("div");
+  d.className="dot";
+  dotsEl.appendChild(d);
+}
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let currentFolder=null;
-let selectedNote=null;
-
-/* GİRİŞ */
-window.login=()=>{
-  signInWithEmailAndPassword(
-    auth,
-    email.value.trim(),
-    password.value
-  ).catch(e=>alert(e.code));
-};
-
-/* OTURUM */
-onAuthStateChanged(auth,user=>{
-  if(user){
-    loginBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
-    loadFolders(user.uid);
+/* Tuşlar: 789 / 456 / 123 / 0 (ortada) */
+const keys = [7,8,9,4,5,6,1,2,3,"",0,""];
+keys.forEach(n=>{
+  const b=document.createElement("div");
+  if(n===""){
+    b.style.visibility="hidden";
+  }else{
+    b.className="key";
+    b.innerText=n;
+    b.onclick=()=>press(n);
   }
+  padEl.appendChild(b);
 });
 
-/* KLASÖRLER */
-function loadFolders(uid){
-  onSnapshot(
-    query(collection(db,"folders"),where("uid","==",uid)),
-    snap=>{
-      folders.innerHTML="";
-      snap.forEach(d=>{
-        const f=document.createElement("div");
-        f.className="folder"+(currentFolder===d.id?" active":"");
-        f.textContent=d.data().name;
+function press(n){
+  if(entered.length>=6) return;
 
-        f.onclick=()=>{
-          currentFolder=d.id;
-          loadNotes();
-          loadFolders(uid);
-        };
+  entered += n;
+  updateDots();
 
-        /* PC sağ tık */
-        f.oncontextmenu=e=>{
-          e.preventDefault();
-          const n=prompt("Klasör adı",d.data().name);
-          if(n) updateDoc(doc(db,"folders",d.id),{name:n});
-        };
-
-        /* Mobil basılı tut */
-        let timer;
-        f.ontouchstart=()=>{
-          timer=setTimeout(()=>{
-            const n=prompt("Klasör adı",d.data().name);
-            if(n) updateDoc(doc(db,"folders",d.id),{name:n});
-          },600);
-        };
-        f.ontouchend=()=>clearTimeout(timer);
-
-        folders.appendChild(f);
-      });
+  if(entered.length===6){
+    if(entered === REAL_PIN){
+      unlock();
+    }else{
+      alert("PIN yanlış!");
+      resetPin();
     }
-  );
-}
-
-/* NOTLAR */
-function loadNotes(){
-  onSnapshot(
-    query(collection(db,"notes"),where("folder","==",currentFolder)),
-    snap=>{
-      notes.innerHTML="";
-      snap.forEach(d=>{
-        const n=document.createElement("div");
-        n.className="note";
-        n.textContent=d.data().text;
-
-        n.onclick=()=>{
-          document.querySelectorAll(".note").forEach(x=>x.classList.remove("selected"));
-          n.classList.add("selected");
-          selectedNote=d.id;
-        };
-
-        /* PC sağ tık */
-        n.oncontextmenu=e=>{
-          e.preventDefault();
-          const t=prompt("Notu düzenle",d.data().text);
-          if(t) updateDoc(doc(db,"notes",d.id),{text:t});
-        };
-
-        /* Mobil basılı tut */
-        let timer;
-        n.ontouchstart=()=>{
-          timer=setTimeout(()=>{
-            const t=prompt("Notu düzenle",d.data().text);
-            if(t) updateDoc(doc(db,"notes",d.id),{text:t});
-          },600);
-        };
-        n.ontouchend=()=>clearTimeout(timer);
-
-        notes.appendChild(n);
-      });
-    }
-  );
-}
-
-/* EKLE / SİL */
-window.addFolder=async()=>{
-  const name=prompt("Klasör adı");
-  if(name) await addDoc(collection(db,"folders"),{
-    uid:auth.currentUser.uid,
-    name
-  });
-};
-
-window.deleteFolder=async()=>{
-  if(!currentFolder) return alert("Klasör seç");
-  if(confirm("Klasör silinsin mi?")){
-    await deleteDoc(doc(db,"folders",currentFolder));
-    currentFolder=null;
-    notes.innerHTML="";
   }
-};
+}
 
-window.addNote=async()=>{
-  if(!currentFolder) return alert("Önce klasör seç");
-  if(!noteText.value) return;
-  await addDoc(collection(db,"notes"),{
-    folder:currentFolder,
-    text:noteText.value
+function updateDots(){
+  document.querySelectorAll(".dot").forEach((d,i)=>{
+    d.classList.toggle("filled", i < entered.length);
   });
-  noteText.value="";
-};
+}
 
-window.deleteNote=async()=>{
-  if(!selectedNote) return alert("Not seç");
-  await deleteDoc(doc(db,"notes",selectedNote));
-  selectedNote=null;
-};
+function resetPin(){
+  entered="";
+  updateDots();
+}
 
-window.togglePanel=()=>{
-  panel.classList.toggle("hidden");
-};
+function unlock(){
+  lockEl.style.display = "none";   // kilit ekranı gider
+  appEl.style.display  = "block";  // uygulama açılır
+}
+
+/* =================================================
+   APP
+================================================= */
+const form = document.getElementById("form");
+const listEl = document.getElementById("list");
+const searchEl = document.getElementById("search");
+const etiketEl = document.getElementById("etiket");
+
+etiketEl.addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());
+searchEl.addEventListener("input",e=>{
+  e.target.value=e.target.value.toUpperCase();
+  render();
+});
+
+function toggleForm(){
+  form.style.display = form.style.display==="none"?"block":"none";
+}
+
+function getData(){
+  return JSON.parse(localStorage.getItem("zcp-data")||"[]");
+}
+function setData(d){
+  localStorage.setItem("zcp-data",JSON.stringify(d));
+}
+
+/* ---------- ŞİFRELEME ---------- */
+async function getKey(pin,salt){
+  const enc=new TextEncoder();
+  const baseKey=await crypto.subtle.importKey(
+    "raw",enc.encode(pin),"PBKDF2",false,["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2",salt:salt,iterations:100000,hash:"SHA-256"},
+    baseKey,{name:"AES-GCM",length:256},
+    false,["encrypt","decrypt"]
+  );
+}
+
+async function encryptText(text){
+  const enc=new TextEncoder();
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const key=await getKey(REAL_PIN,salt);
+  const cipher=await crypto.subtle.encrypt(
+    {name:"AES-GCM",iv},key,enc.encode(text)
+  );
+  return {iv:[...iv],salt:[...salt],data:[...new Uint8Array(cipher)]};
+}
+
+async function decryptText(obj){
+  const iv=new Uint8Array(obj.iv);
+  const salt=new Uint8Array(obj.salt);
+  const data=new Uint8Array(obj.data);
+  const key=await getKey(REAL_PIN,salt);
+  const plain=await crypto.subtle.decrypt(
+    {name:"AES-GCM",iv},key,data
+  );
+  return new TextDecoder().decode(plain);
+}
+
+/* ---------- KAYDET ---------- */
+async function saveEntry(){
+  const etiket=etiketEl.value.trim();
+  const username=document.getElementById("username").value.trim();
+  const password=document.getElementById("password").value.trim();
+  if(!etiket||!username||!password){
+    alert("Tüm alanları doldur");
+    return;
+  }
+
+  const encUser = await encryptText(username);
+  const encPass = await encryptText(password);
+
+  const d=getData();
+  d.push({etiket,encUser,encPass});
+  setData(d);
+
+  etiketEl.value="";
+  document.getElementById("username").value="";
+  document.getElementById("password").value="";
+  render();
+}
+
+/* ---------- SİL ---------- */
+function deleteEntry(i){
+  const d=getData();
+  d.splice(i,1);
+  setData(d);
+  render();
+}
+
+/* ---------- LİSTE ---------- */
+function render(){
+  const data=getData();
+  const q=searchEl.value;
+  listEl.innerHTML="";
+
+  data.forEach((item,i)=>{
+    if(q && !item.etiket.includes(q)) return;
+
+    const card=document.createElement("div");
+    card.className="card";
+
+    const title=document.createElement("div");
+    title.className="card-title";
+    title.innerText=item.etiket;
+
+    const del=document.createElement("button");
+    del.className="delete-btn";
+    del.innerText="X";
+    del.onclick=e=>{
+      e.stopPropagation();
+      deleteEntry(i);
+    };
+
+    const details=document.createElement("div");
+    details.className="details";
+    details.innerHTML=`<div>******</div>`;
+
+    let open=false;
+    card.onclick=async ()=>{
+      if(!open){
+        const u=await decryptText(item.encUser);
+        const p=await decryptText(item.encPass);
+        details.innerHTML=`
+          <div><b>Kullanıcı:</b> ${u}</div>
+          <div><b>Şifre:</b> ${p}</div>
+        `;
+        details.style.display="block";
+        open=true;
+      }else{
+        details.style.display="none";
+        open=false;
+      }
+    };
+
+    card.appendChild(title);
+    card.appendChild(del);
+    card.appendChild(details);
+    listEl.appendChild(card);
+  });
+}
+
+render();
 </script>
 </body>
 </html>
